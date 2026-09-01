@@ -28,7 +28,7 @@ Pipeline (`app/pipeline.py`):
 4. Persist to Postgres (Supabase) — `app/db/models.py`, `app/db/database.py`
 5. Sync verdict back to the Sheet (authenticated via Google service account)
 
-## Why this satisfies each requirement
+## Requirements
 
 | Requirement | How it's met |
 |---|---|
