@@ -1,0 +1,15 @@
+name: Scheduled Pipeline Trigger
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  trigger-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger pipeline via API
+        run: |
+          curl -X POST https://company-intelligence-agent-xrq7.onrender.com/trigger \
+            --fail --max-time 120
