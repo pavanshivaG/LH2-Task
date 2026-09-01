@@ -16,6 +16,22 @@ from app.pipeline import run_pipeline
 from app.db.database import init_db, get_session
 from app.db.models import CompanyRecord
 
+
+import json as json_lib
+
+def _ensure_service_account_file():
+    """
+    On deployed environments (Render), the service account JSON is passed
+    as an env var rather than a mounted file. Write it to disk on startup.
+    """
+    json_env = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+    target_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "service-account.json")
+    if json_env and not os.path.exists(target_path):
+        with open(target_path, "w") as f:
+            f.write(json_env)
+        print(f"Wrote service account credentials to {target_path}")
+
+_ensure_service_account_file()
 SCHEDULE_MINUTES = int(os.getenv("SCHEDULE_MINUTES", "30"))
 
 scheduler = BackgroundScheduler()
