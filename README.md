@@ -55,3 +55,76 @@ Pipeline (`app/pipeline.py`):
 - **CI/CD:** GitHub Actions (build check on push, scheduled autonomous trigger)
 
 ## Project structure
+
+
+LH2-Task/
+├── app/
+│ ├── main.py # FastAPI app, endpoints, scheduler
+│ ├── pipeline.py # Orchestrates enrich -> persist -> judge -> sync
+│ ├── sheets.py # Google Sheets read/write layer
+│ ├── judge.py # LLM judgment logic
+│ ├── enrich/
+│ │ ├── http_signal.py # Signal 1: plain HTTP
+│ │ ├── browser_signal.py # Signal 2: Playwright browser automation
+│ │ └── secondary_signal.py # Signal 3: HN Algolia API
+│ └── db/
+│ ├── models.py # SQLAlchemy ORM models
+│ └── database.py # Engine/session setup
+├── .github/workflows/
+│ ├── ci.yml # Runs on every push
+│ └── scheduled-trigger.yml # Runs every 6h, no human involved
+├── Dockerfile
+├── requirements.txt
+├── reset_db.py # Dev utility: drop + recreate tables on schema change
+├── test_sheets_connection.py # Manual smoke test for Sheets auth
+└── test_db_connection.py # Manual smoke test for DB connection
+
+
+
+
+## Environment variables
+
+See `.env.example`. Required:
+
+- `GOOGLE_SHEET_ID` — the target Sheet's ID
+- `GOOGLE_SERVICE_ACCOUNT_FILE` — path to service account JSON (local dev)
+- `GOOGLE_SERVICE_ACCOUNT_JSON` — full JSON content as a string (used in deployment; written to disk at startup by `app/main.py`)
+- `DATABASE_URL` — Postgres connection string (Supabase pooler recommended)
+- `GEMINI_API_KEY` — Google AI Studio API key
+
+## Running locally
+
+```bash
+python -m venv venv
+source venv/Scripts/activate   # Windows Git Bash
+pip install -r requirements.txt
+playwright install chromium
+
+cp .env.example .env   # fill in real values
+
+python -m app.pipeline          # run the pipeline once, standalone
+uvicorn app.main:app --reload   # or run the full API + scheduler
+```
+
+## Running with Docker
+
+```bash
+docker build -t lh2-task .
+docker run -p 8000:8000 --env-file .env lh2-task
+```
+
+## API endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/` | Health check |
+| POST | `/trigger` | Run the pipeline immediately |
+| GET | `/status` | Summary of the most recent run |
+| GET | `/companies` | All processed company records |
+| GET | `/companies/{id}` | Full detail for one company, including raw signals |
+
+## Notes 
+
+- Render's free tier spins down after inactivity; the scheduled GitHub Action helps keep it warm and guarantees periodic execution regardless.
+- `gemini-3.6-flash` is used since earlier model names (e.g. `gemini-2.0-flash`) were deprecated during development — model availability should be re-checked periodically via the Gemini API.
+- The browser automation signal targets Bing's search results page (less bot-restrictive than Google for lightweight automation); this could be swapped for direct company-page scraping if a more source-specific signal is preferred.
